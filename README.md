@@ -23,8 +23,8 @@ obsidion {option} NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 ### Options
 
 ```
---copy : move files
---move : move notes
+--copy : copy and convert notes
+--move : move and convert notes
 ```
 
 ### Examples
@@ -33,17 +33,17 @@ obsidion {option} NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 obsidion --copy NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 ```
 
-Copies the notes from the Notion export folder to the Obsidian vault folder.
+Copies and converts the notes from the Notion export folder to the Obsidian vault folder.
 
 ```bash
 obsidion --move NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 ```
 
-Moves the notes from the Notion export folder to the Obsidian vault folder.
+Moves and converts the notes from the Notion export folder to the Obsidian vault folder.
 
 ## Version
 
-0.0.1
+0.1
 
 ## Author
 
