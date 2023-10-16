@@ -21,12 +21,13 @@
 // -- IMPORTS
 
 import core.stdc.stdlib : exit;
+import std.algorithm : canFind;
 import std.conv : to;
 import std.file : copy, dirEntries, exists, mkdirRecurse, readText, rename, write, SpanMode;
-import std.path : absolutePath, baseName, dirName, globMatch;
+import std.path : absolutePath;
 import std.regex : matchAll, matchFirst, regex;
 import std.stdio : writeln, File;
-import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith, stripRight, toLower;
+import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith;
 
 // -- TYPES
 
@@ -156,132 +157,88 @@ class FOLDER
     void RenameFiles(
         )
     {
-        bool
-            new_label_exists;
-        long
-            number;
         string
-            new_name,
-            new_label;
+            base_old_name,
+            fixed_new_name;
+        string[ string ]
+            fixed_new_name_by_old_name_map;
+        string[][ string ]
+            old_name_array_by_new_name_map;
 
         foreach ( file; FileArray )
         {
             if ( file.IsRenamed )
             {
-                number = 1;
-
-                do
+                if ( ( file.NewName in old_name_array_by_new_name_map ) == null
+                     || !old_name_array_by_new_name_map[ file.NewName ].canFind( file.OldName ) )
                 {
-                    if ( number == 1 )
-                    {
-                        new_name = file.NewName;
-                    }
-                    else
-                    {
-                        new_name = file.NewName ~ " (" ~ number.to!string() ~ ")";
-                    }
-
-                    new_label = new_name ~ file.Extension;
-                    new_label_exists = false;
-
-                    foreach ( sibling_file; FileArray )
-                    {
-                        new_label_exists
-                            = ( sibling_file != file
-                                && sibling_file.GetNewLabel() == new_label );
-
-                        if ( new_label_exists )
-                        {
-                            break;
-                        }
-                    }
-
-                    ++number;
+                    old_name_array_by_new_name_map[ file.NewName ] ~= file.OldName;
                 }
-                while ( new_label_exists );
+            }
+        }
 
-                file.NewName = new_name;
-                FileByUuidSuffixMap[ file.OldName.GetUuidSuffix() ] = file;
+        foreach ( sub_folder; SubFolderArray )
+        {
+            if ( sub_folder.IsRenamed )
+            {
+                if ( ( sub_folder.NewName in old_name_array_by_new_name_map ) == null
+                     || !old_name_array_by_new_name_map[ sub_folder.NewName ].canFind( sub_folder.OldName ) )
+                {
+                    old_name_array_by_new_name_map[ sub_folder.NewName ] ~= sub_folder.OldName;
+                }
+            }
+        }
+
+        foreach ( new_name, old_name_array; old_name_array_by_new_name_map )
+        {
+            foreach ( old_name_index, old_name; old_name_array )
+            {
+                if ( old_name_index == 0 )
+                {
+                    fixed_new_name = new_name;
+                }
+                else
+                {
+                    fixed_new_name = new_name ~ " (" ~ ( old_name_index + 1 ).to!string() ~ ")";
+                }
+
+                fixed_new_name_by_old_name_map[ old_name ] = fixed_new_name;
+            }
+        }
+
+        foreach ( file; FileArray )
+        {
+            if ( file.IsRenamed )
+            {
+                file.NewName = fixed_new_name_by_old_name_map[ file.OldName ];
+
+                FileByUuidSuffixMap[ file.OldName.GetUuidSuffix ] = file;
+            }
+            else if ( file.OldName.endsWith( "_all" )
+                      && file.Extension == ".csv" )
+            {
+                base_old_name = file.OldName[ 0 .. $ - 4 ];
+
+                if ( ( base_old_name in fixed_new_name_by_old_name_map ) != null )
+                {
+                    file.NewName = fixed_new_name_by_old_name_map[ base_old_name ] ~ "_all";
+                }
+            }
+        }
+
+        foreach ( sub_folder; SubFolderArray )
+        {
+            if ( sub_folder.IsRenamed )
+            {
+                sub_folder.NewName = fixed_new_name_by_old_name_map[ sub_folder.OldName ];
+
+                FolderByUuidSuffixMap[ sub_folder.OldName.GetUuidSuffix ] = sub_folder;
             }
         }
 
         foreach ( sub_folder; SubFolderArray )
         {
             sub_folder.RenameFiles();
-        }
-    }
-
-    // ~~
-
-    void RenameFolders(
-        )
-    {
-        bool
-            file_name_exists,
-            new_name_exists;
-        long
-            number;
-        string
-            new_name;
-
-        if ( IsRenamed )
-        {
-            file_name_exists = false;
-
-            foreach ( file; FileArray )
-            {
-                if ( file.OldName == OldName )
-                {
-                    file_name_exists = true;
-
-                    NewName = file.NewName;
-
-                    break;
-                }
-            }
-
-            if ( !file_name_exists
-                 && SuperFolder !is null )
-            {
-                number = 1;
-
-                do
-                {
-                    if ( number == 1 )
-                    {
-                        new_name = NewName;
-                    }
-                    else
-                    {
-                        new_name = NewName ~ " (" ~ number.to!string() ~ ")";
-                    }
-
-                    new_name_exists = false;
-
-                    foreach ( sibling_folder; SuperFolder.SubFolderArray )
-                    {
-                        new_name_exists
-                            = ( sibling_folder != this
-                                && sibling_folder.NewName == new_name );
-
-                        if ( new_name_exists )
-                        {
-                            break;
-                        }
-                    }
-
-                    ++number;
-                }
-                while ( new_name_exists );
-
-                NewName = new_name;
-                FolderByUuidSuffixMap[ OldName.GetUuidSuffix() ] = this;
-            }
-        }
-
-        foreach ( sub_folder; SubFolderArray )
-        {
-            sub_folder.RenameFolders();
         }
     }
 
@@ -599,7 +556,30 @@ string GetEncodedName(
     string name
     )
 {
-    return name.replace( " ", "%20" );
+    string
+        encoded_name;
+    ubyte[]
+        character_array;
+
+    character_array = cast( ubyte[] )name;
+
+    foreach ( character; character_array )
+    {
+        if ( character <= 32
+             || character >= 128 )
+        {
+            encoded_name
+                ~= "%"
+                   ~ "0123456789ABCDEF"[ character >> 4 ]
+                   ~ "0123456789ABCDEF"[ character & 15 ];
+        }
+        else
+        {
+            encoded_name ~= character.to!char();
+        }
+    }
+
+    return encoded_name;
 }
 
 // ~~
@@ -962,19 +942,6 @@ void ScanFiles(
 
 // ~~
 
-void RenameFolders(
-    )
-{
-    writeln( "Renaming folders : ", OldFolderPath );
-
-    if ( FolderArray.length > 0 )
-    {
-        FolderArray[ 0 ].RenameFolders();
-    }
-}
-
-// ~~
-
 void RenameFiles(
     )
 {
@@ -1072,7 +1039,6 @@ void main(
              && !NewFolderPath.startsWith( OldFolderPath ) )
         {
             ScanFiles();
-            RenameFolders();
             RenameFiles();
 
             if ( CopyOptionIsEnabled )
@@ -1091,7 +1057,7 @@ void main(
     }
 
     writeln( "Usage :" );
-    writeln( "    obsidion [options] OLD_FOLDER/ NEW_FOLDER/" );
+    writeln( "    obsidion [options] NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
     writeln( "Options :" );
     writeln( "    --move" );
     writeln( "Examples :" );
