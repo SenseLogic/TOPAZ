@@ -1,3 +1,6 @@
 obsidion
+*.ilk
 *.o
+*.obj
+*.pdb
 run.bat

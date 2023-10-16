@@ -22,10 +22,10 @@
 
 import core.stdc.stdlib : exit;
 import std.conv : to;
-import std.file : copy, dirEntries, exists, mkdirRecurse, readText, rename, SpanMode;
+import std.file : copy, dirEntries, exists, mkdirRecurse, readText, rename, write, SpanMode;
 import std.path : absolutePath, baseName, dirName, globMatch;
-import std.regex : matchFirst, regex;
-import std.stdio : write, writeln, File;
+import std.regex : matchAll, matchFirst, regex;
+import std.stdio : writeln, File;
 import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith, stripRight, toLower;
 
 // -- TYPES
@@ -153,10 +153,71 @@ class FOLDER
 
     // -- OPERATIONS
 
+    void RenameFiles(
+        )
+    {
+        bool
+            new_label_exists;
+        long
+            number;
+        string
+            new_name,
+            new_label;
+
+        foreach ( file; FileArray )
+        {
+            if ( file.IsRenamed )
+            {
+                number = 1;
+
+                do
+                {
+                    if ( number == 1 )
+                    {
+                        new_name = file.NewName;
+                    }
+                    else
+                    {
+                        new_name = file.NewName ~ " (" ~ number.to!string() ~ ")";
+                    }
+
+                    new_label = new_name ~ file.Extension;
+                    new_label_exists = false;
+
+                    foreach ( sibling_file; FileArray )
+                    {
+                        new_label_exists
+                            = ( sibling_file != file
+                                && sibling_file.GetNewLabel() == new_label );
+
+                        if ( new_label_exists )
+                        {
+                            break;
+                        }
+                    }
+
+                    ++number;
+                }
+                while ( new_label_exists );
+
+                file.NewName = new_name;
+                FileByUuidSuffixMap[ file.OldName.GetUuidSuffix() ] = file;
+            }
+        }
+
+        foreach ( sub_folder; SubFolderArray )
+        {
+            sub_folder.RenameFiles();
+        }
+    }
+
+    // ~~
+
     void RenameFolders(
         )
     {
         bool
+            file_name_exists,
             new_name_exists;
         long
             number;
@@ -165,7 +226,22 @@ class FOLDER
 
         if ( IsRenamed )
         {
-            if ( SuperFolder !is null )
+            file_name_exists = false;
+
+            foreach ( file; FileArray )
+            {
+                if ( file.OldName == OldName )
+                {
+                    file_name_exists = true;
+
+                    NewName = file.NewName;
+
+                    break;
+                }
+            }
+
+            if ( !file_name_exists
+                 && SuperFolder !is null )
             {
                 number = 1;
 
@@ -199,87 +275,13 @@ class FOLDER
                 while ( new_name_exists );
 
                 NewName = new_name;
+                FolderByUuidSuffixMap[ OldName.GetUuidSuffix() ] = this;
             }
         }
 
         foreach ( sub_folder; SubFolderArray )
         {
             sub_folder.RenameFolders();
-        }
-    }
-
-    // ~~
-
-    void RenameFiles(
-        )
-    {
-        bool
-            new_label_exists;
-        long
-            number;
-        string
-            new_name,
-            new_label;
-
-        foreach ( file; FileArray )
-        {
-            if ( file.IsRenamed )
-            {
-                number = 1;
-
-                do
-                {
-                    if ( number == 1 )
-                    {
-                        new_name = NewName;
-                    }
-                    else
-                    {
-                        new_name = NewName ~ " (" ~ number.to!string() ~ ")";
-                    }
-
-                    new_label = new_name ~ file.Extension;
-                    new_label_exists = false;
-
-                    foreach ( sibling_file; FileArray )
-                    {
-                        new_label_exists
-                            = ( sibling_file != this
-                                && sibling_file.GetNewLabel() == new_label );
-
-                        if ( new_label_exists )
-                        {
-                            break;
-                        }
-                    }
-
-                    ++number;
-                }
-                while ( new_label_exists );
-
-                NewName = new_name;
-            }
-        }
-
-        foreach ( sub_folder; SubFolderArray )
-        {
-            sub_folder.RenameFiles();
-        }
-    }
-
-    // ~~
-
-    void MoveFiles(
-        )
-    {
-        foreach ( file; FileArray )
-        {
-            file.Move();
-        }
-
-        foreach ( sub_folder; SubFolderArray )
-        {
-            sub_folder.MoveFiles();
         }
     }
 
@@ -296,6 +298,22 @@ class FOLDER
         foreach ( sub_folder; SubFolderArray )
         {
             sub_folder.CopyFiles();
+        }
+    }
+
+    // ~~
+
+    void MoveFiles(
+        )
+    {
+        foreach ( file; FileArray )
+        {
+            file.Move();
+        }
+
+        foreach ( sub_folder; SubFolderArray )
+        {
+            sub_folder.MoveFiles();
         }
     }
 
@@ -331,8 +349,8 @@ class FILE
         NewName,
         Extension;
     bool
-        IsRenamed,
-        IsLinked;
+        IsLinked,
+        IsRenamed;
 
     // -- CONSTRUCTORS
 
@@ -346,12 +364,13 @@ class FILE
         Folder = FolderArray[ $ - 1 ];
         Folder.FileArray ~= this;
 
-        IsRenamed
-            = ( ( Extension == ".md"
-                  || Extension == ".csv" )
-                && OldName.HasUuidSuffix() );
+        IsLinked
+            = ( Extension == ".md"
+                || Extension == ".csv" );
 
-        IsLinked = ( Extension == ".md" );
+        IsRenamed
+            = ( IsLinked
+                && OldName.HasUuidSuffix() );
 
         if ( IsRenamed )
         {
@@ -407,17 +426,6 @@ class FILE
 
     // -- OPERATIONS
 
-    void Move(
-        )
-    {
-        MoveFile(
-            GetFullPath( .OldFolderPath, GetOldPath() ),
-            GetFullPath( .NewFolderPath, GetNewPath() )
-            );
-    }
-
-    // ~~
-
     void Copy(
         )
     {
@@ -429,11 +437,65 @@ class FILE
 
     // ~~
 
+    void Move(
+        )
+    {
+        MoveFile(
+            GetFullPath( .OldFolderPath, GetOldPath() ),
+            GetFullPath( .NewFolderPath, GetNewPath() )
+            );
+    }
+
+    // ~~
+
     void Link(
         )
     {
+        string
+            file_path,
+            file_text;
+        string[]
+            uuid_suffix_array;
+        FILE*
+            found_file;
+        FOLDER*
+            found_folder;
+
         if ( IsLinked )
         {
+            file_path = GetFullPath( .NewFolderPath, GetNewPath() );
+            file_text = file_path.ReadText();
+
+            foreach ( match; file_text.matchAll( UuidSuffixRegularExpression ) )
+            {
+                uuid_suffix_array ~= " " ~ match.hit[ 3 .. $ ];
+            }
+
+            foreach ( uuid_suffix; uuid_suffix_array )
+            {
+                found_folder = ( uuid_suffix in FolderByUuidSuffixMap );
+
+                if ( found_folder !is null )
+                {
+                    file_text = file_text.replace( found_folder.OldName, found_folder.NewName );
+                }
+            }
+
+            foreach ( uuid_suffix; uuid_suffix_array )
+            {
+                found_file = ( uuid_suffix in FileByUuidSuffixMap );
+
+                if ( found_file !is null )
+                {
+                    file_text
+                        = file_text.replace(
+                              found_file.OldName.GetEncodedName(),
+                              found_file.NewName.GetEncodedName()
+                              );
+                }
+            }
+
+            file_path.WriteText( file_text );
         }
     }
 }
@@ -441,21 +503,26 @@ class FILE
 // -- CONSTANTS
 
 auto
+    UuidSuffixRegularExpression = regex( "%20[0-9a-f]{32}" ),
     UuidSuffixedNameRegularExpression = regex( "^.+ [0-9a-f]{32}$" );
 
 // -- VARIABLES
 
 bool
+    CopyOptionIsEnabled,
     MoveOptionIsEnabled;
 string
     OldFolderPath,
     NewFolderPath;
 FILE[]
     FileArray;
+FILE[ string ]
+    FileByUuidSuffixMap;
 FOLDER[]
     FolderArray;
 FOLDER[ string ]
-    FolderByOldFolderPathMap;
+    FolderByOldFolderPathMap,
+    FolderByUuidSuffixMap;
 
 // -- FUNCTIONS
 
@@ -501,6 +568,15 @@ bool HasUuidSuffix(
 
 // ~~
 
+string GetUuidSuffix(
+    string name
+    )
+{
+    return name[ $ - 33 .. $ ];
+}
+
+// ~~
+
 string RemoveUuidSuffix(
     string name
     )
@@ -515,6 +591,15 @@ string GetFolderPath(
     )
 {
     return folder_name_array.join( '/' ) ~ '/';
+}
+
+// ~~
+
+string GetEncodedName(
+    string name
+    )
+{
+    return name.replace( " ", "%20" );
 }
 
 // ~~
@@ -695,29 +780,6 @@ void CreateFolder(
 
 // ~~
 
-void MoveFile(
-    string old_file_path,
-    string new_file_path
-    )
-{
-    CreateFolder( new_file_path.GetFolderPath() );
-
-    writeln( "Moving file : ", old_file_path, " => ", new_file_path );
-
-    try
-    {
-        old_file_path.GetPhysicalPath().rename(
-            new_file_path.GetPhysicalPath()
-            );
-    }
-    catch ( Exception exception )
-    {
-        Abort( "Can't move file : " ~ old_file_path, exception );
-    }
-}
-
-// ~~
-
 void CopyFile(
     string old_file_path,
     string new_file_path
@@ -736,6 +798,29 @@ void CopyFile(
     catch ( Exception exception )
     {
         Abort( "Can't copy file : " ~ old_file_path, exception );
+    }
+}
+
+// ~~
+
+void MoveFile(
+    string old_file_path,
+    string new_file_path
+    )
+{
+    CreateFolder( new_file_path.GetFolderPath() );
+
+    writeln( "Moving file : ", old_file_path, " => ", new_file_path );
+
+    try
+    {
+        old_file_path.GetPhysicalPath().rename(
+            new_file_path.GetPhysicalPath()
+            );
+    }
+    catch ( Exception exception )
+    {
+        Abort( "Can't move file : " ~ old_file_path, exception );
     }
 }
 
@@ -903,19 +988,6 @@ void RenameFiles(
 
 // ~~
 
-void MoveFiles(
-    )
-{
-    writeln( "Moving files : ", NewFolderPath );
-
-    if ( FolderArray.length > 0 )
-    {
-        FolderArray[ 0 ].MoveFiles();
-    }
-}
-
-// ~~
-
 void CopyFiles(
     )
 {
@@ -924,6 +996,19 @@ void CopyFiles(
     if ( FolderArray.length > 0 )
     {
         FolderArray[ 0 ].CopyFiles();
+    }
+}
+
+// ~~
+
+void MoveFiles(
+    )
+{
+    writeln( "Moving files : ", NewFolderPath );
+
+    if ( FolderArray.length > 0 )
+    {
+        FolderArray[ 0 ].MoveFiles();
     }
 }
 
@@ -951,6 +1036,7 @@ void main(
 
     argument_array = argument_array[ 1 .. $ ];
 
+    CopyOptionIsEnabled = false;
     MoveOptionIsEnabled = false;
 
     while ( argument_array.length >= 1
@@ -959,7 +1045,11 @@ void main(
         option = argument_array[ 0 ];
         argument_array = argument_array[ 1 .. $ ];
 
-        if ( option == "--move" )
+        if ( option == "--copy" )
+        {
+            CopyOptionIsEnabled = true;
+        }
+        else if ( option == "--move" )
         {
             MoveOptionIsEnabled = true;
         }
@@ -969,7 +1059,9 @@ void main(
         }
     }
 
-    if ( argument_array.length == 2 )
+    if ( argument_array.length == 2
+         && ( CopyOptionIsEnabled
+              || MoveOptionIsEnabled ) )
     {
         OldFolderPath = argument_array[ 0 ].GetLogicalPath();
         NewFolderPath = argument_array[ 1 ].GetLogicalPath();
@@ -983,13 +1075,13 @@ void main(
             RenameFolders();
             RenameFiles();
 
-            if ( MoveOptionIsEnabled )
-            {
-                MoveFiles();
-            }
-            else
+            if ( CopyOptionIsEnabled )
             {
                 CopyFiles();
+            }
+            else if ( MoveOptionIsEnabled )
+            {
+                MoveFiles();
             }
 
             LinkFiles();
