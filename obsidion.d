@@ -912,8 +912,8 @@ void ScanFiles(
     )
 {
     string
-        file_path,
-        folder_path;
+        physical_file_path,
+        physical_folder_path;
     FILE
         file;
 
@@ -921,16 +921,16 @@ void ScanFiles(
 
     try
     {
-        folder_path = OldFolderPath.GetPhysicalPath();
+        physical_folder_path = OldFolderPath.GetPhysicalPath();
 
-        foreach ( folder_entry; folder_path.dirEntries( SpanMode.depth ) )
+        foreach ( folder_entry; physical_folder_path.dirEntries( SpanMode.depth ) )
         {
             if ( folder_entry.isFile()
                  && !folder_entry.isSymlink() )
             {
-                file_path = folder_entry.name();
+                physical_file_path = folder_entry.name();
 
-                file = GetFile( "/" ~ file_path[ folder_path.length .. $ ].GetLogicalPath() );
+                file = GetFile( "/" ~ physical_file_path[ physical_folder_path.length .. $ ].GetLogicalPath() );
             }
         }
     }
