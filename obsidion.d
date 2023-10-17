@@ -3,7 +3,7 @@
 
     https://github.com/senselogic/OBSIDION
 
-    Copyright (C) 2020 Eric Pelzer (ecstatic.coder@gmail.com)
+    Copyright (C) 2023 Eric Pelzer (ecstatic.coder@gmail.com)
 
     Obsidion is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
