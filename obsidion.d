@@ -23,7 +23,7 @@
 import core.stdc.stdlib : exit;
 import std.algorithm : canFind;
 import std.conv : to;
-import std.file : copy, dirEntries, exists, mkdirRecurse, readText, rename, write, SpanMode;
+import std.file : copy, dirEntries, exists, mkdirRecurse, readText, write, SpanMode;
 import std.path : absolutePath;
 import std.regex : matchAll, matchFirst, regex;
 import std.stdio : writeln, File;
@@ -260,22 +260,6 @@ class FOLDER
 
     // ~~
 
-    void MoveFiles(
-        )
-    {
-        foreach ( file; FileArray )
-        {
-            file.Move();
-        }
-
-        foreach ( sub_folder; SubFolderArray )
-        {
-            sub_folder.MoveFiles();
-        }
-    }
-
-    // ~~
-
     void LinkFiles(
         )
     {
@@ -394,17 +378,6 @@ class FILE
 
     // ~~
 
-    void Move(
-        )
-    {
-        MoveFile(
-            GetFullPath( .OldFolderPath, GetOldPath() ),
-            GetFullPath( .NewFolderPath, GetNewPath() )
-            );
-    }
-
-    // ~~
-
     void Link(
         )
     {
@@ -465,9 +438,6 @@ auto
 
 // -- VARIABLES
 
-bool
-    CopyOptionIsEnabled,
-    MoveOptionIsEnabled;
 string
     OldFolderPath,
     NewFolderPath;
@@ -780,29 +750,6 @@ void CopyFile(
 
 // ~~
 
-void MoveFile(
-    string old_file_path,
-    string new_file_path
-    )
-{
-    CreateFolder( new_file_path.GetFolderPath() );
-
-    writeln( "Moving file : ", old_file_path, " => ", new_file_path );
-
-    try
-    {
-        old_file_path.GetPhysicalPath().rename(
-            new_file_path.GetPhysicalPath()
-            );
-    }
-    catch ( Exception exception )
-    {
-        Abort( "Can't move file : " ~ old_file_path, exception );
-    }
-}
-
-// ~~
-
 string ReadText(
     string file_path
     )
@@ -970,19 +917,6 @@ void CopyFiles(
 
 // ~~
 
-void MoveFiles(
-    )
-{
-    writeln( "Moving files : ", NewFolderPath );
-
-    if ( FolderArray.length > 0 )
-    {
-        FolderArray[ 0 ].MoveFiles();
-    }
-}
-
-// ~~
-
 void LinkFiles(
     )
 {
@@ -1000,37 +934,9 @@ void main(
     string[] argument_array
     )
 {
-    string
-        option;
-
     argument_array = argument_array[ 1 .. $ ];
 
-    CopyOptionIsEnabled = false;
-    MoveOptionIsEnabled = false;
-
-    while ( argument_array.length >= 1
-            && argument_array[ 0 ].startsWith( "--" ) )
-    {
-        option = argument_array[ 0 ];
-        argument_array = argument_array[ 1 .. $ ];
-
-        if ( option == "--copy" )
-        {
-            CopyOptionIsEnabled = true;
-        }
-        else if ( option == "--move" )
-        {
-            MoveOptionIsEnabled = true;
-        }
-        else
-        {
-            Abort( "Invalid option : " ~ option );
-        }
-    }
-
-    if ( argument_array.length == 2
-         && ( CopyOptionIsEnabled
-              || MoveOptionIsEnabled ) )
+    if ( argument_array.length == 2 )
     {
         OldFolderPath = argument_array[ 0 ].GetLogicalPath();
         NewFolderPath = argument_array[ 1 ].GetLogicalPath();
@@ -1042,16 +948,7 @@ void main(
         {
             ScanFiles();
             RenameFiles();
-
-            if ( CopyOptionIsEnabled )
-            {
-                CopyFiles();
-            }
-            else if ( MoveOptionIsEnabled )
-            {
-                MoveFiles();
-            }
-
+            CopyFiles();
             LinkFiles();
 
             return;
@@ -1059,12 +956,7 @@ void main(
     }
 
     writeln( "Usage :" );
-    writeln( "    obsidion [options] NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
-    writeln( "Options :" );
-    writeln( "    --move" );
-    writeln( "Examples :" );
     writeln( "    obsidion NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
-    writeln( "    obsidion --move NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
 
     Abort( "Invalid arguments : " ~ argument_array.to!string() );
 }

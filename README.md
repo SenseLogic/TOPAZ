@@ -17,33 +17,14 @@ dmd -m64 obsidion.d
 ## Command line
 
 ```bash
-obsidion {option} NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
-```
-
-### Options
-
-```
---copy : copy and convert notes
---move : move and convert notes
-```
-
-### Examples
-
-```bash
-obsidion --copy NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
+obsidion NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 ```
 
 Copies and converts the notes from the Notion export folder to the Obsidian vault folder.
 
-```bash
-obsidion --move NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
-```
-
-Moves and converts the notes from the Notion export folder to the Obsidian vault folder.
-
 ## Version
 
-0.1
+1.0
 
 ## Author
 
