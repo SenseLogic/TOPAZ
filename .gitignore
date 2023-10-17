@@ -1,4 +1,5 @@
 obsidion
+*.exe
 *.ilk
 *.o
 *.obj

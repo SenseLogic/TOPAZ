@@ -605,10 +605,7 @@ string GetPhysicalPath(
 {
     version( Windows )
     {
-        if ( path.length > 260 )
-        {
-            return `\\?\` ~ path.absolutePath;
-        }
+        return `\\?\` ~ path.absolutePath.replace( '/', '\\' );
     }
 
     return path;
@@ -731,7 +728,7 @@ string GetFileExtension(
     }
     else
     {
-        return file_label;
+        return "";
     }
 }
 
@@ -906,8 +903,6 @@ FILE GetFile(
     string file_path
     )
 {
-    writeln( "Reading file : ", file_path );
-
     return new FILE( file_path );
 }
 
@@ -916,6 +911,9 @@ FILE GetFile(
 void ScanFiles(
     )
 {
+    string
+        file_path,
+        folder_path;
     FILE
         file;
 
@@ -923,12 +921,16 @@ void ScanFiles(
 
     try
     {
-        foreach ( file_path; OldFolderPath.dirEntries( SpanMode.depth ) )
+        folder_path = OldFolderPath.GetPhysicalPath();
+
+        foreach ( folder_entry; folder_path.dirEntries( SpanMode.depth ) )
         {
-            if ( file_path.isFile()
-                 && !file_path.isSymlink() )
+            if ( folder_entry.isFile()
+                 && !folder_entry.isSymlink() )
             {
-                file = GetFile( "/" ~ file_path.name().GetLogicalPath()[ OldFolderPath.length .. $ ] );
+                file_path = folder_entry.name();
+
+                file = GetFile( "/" ~ file_path[ folder_path.length .. $ ].GetLogicalPath() );
             }
         }
     }
@@ -936,7 +938,7 @@ void ScanFiles(
     {
         writeln( exception.msg );
 
-        Abort( "Can't read folder : " ~ OldFolderPath );
+        Abort( "Can't read folder : " ~ OldFolderPath.GetPhysicalPath() );
     }
 }
 
