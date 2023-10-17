@@ -605,7 +605,7 @@ string GetPhysicalPath(
 {
     version( Windows )
     {
-        return `\\?\` ~ path.absolutePath.replace( '/', '\\' );
+        return `\\?\` ~ path.absolutePath.replace( '/', '\\' ).replace( "\\.\\", "\\" );
     }
 
     return path;
