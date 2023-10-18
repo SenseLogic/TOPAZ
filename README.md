@@ -1,6 +1,6 @@
-![](https://github.com/senselogic/OBSIDION/blob/master/LOGO/obsidion.png)
+![](https://github.com/senselogic/TOPAZ/blob/master/LOGO/topaz.png)
 
-# Obsidion
+# Topaz
 
 Notion to Obsidian notebook converter.
 
@@ -11,13 +11,13 @@ Install the [DMD 2 compiler](https://dlang.org/download.html) (using the MinGW s
 Build the executable with the following command line :
 
 ```bash
-dmd -m64 obsidion.d
+dmd -m64 topaz.d
 ```
 
 ## Command line
 
 ```bash
-obsidion NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
+topaz NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
 ```
 
 Copies and converts the notes from the Notion export folder to the Obsidian vault folder.

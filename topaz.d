@@ -1,21 +1,21 @@
 /*
-    This file is part of the Obsidion distribution.
+    This file is part of the Topaz distribution.
 
-    https://github.com/senselogic/OBSIDION
+    https://github.com/senselogic/TOPAZ
 
     Copyright (C) 2023 Eric Pelzer (ecstatic.coder@gmail.com)
 
-    Obsidion is free software: you can redistribute it and/or modify
+    Topaz is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, version 3.
 
-    Obsidion is distributed in the hope that it will be useful,
+    Topaz is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Obsidion.  If not, see <http://www.gnu.org/licenses/>.
+    along with Topaz.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 // -- IMPORTS
@@ -956,7 +956,7 @@ void main(
     }
 
     writeln( "Usage :" );
-    writeln( "    obsidion NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
+    writeln( "    topaz NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
 
     Abort( "Invalid arguments : " ~ argument_array.to!string() );
 }

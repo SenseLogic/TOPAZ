@@ -1,4 +1,4 @@
 #!/bin/sh
 set -x
-dmd -m64 obsidion.d
+dmd -m64 topaz.d
 rm *.o

@@ -2,13 +2,13 @@
 <svg
    class="img-fluid"
    id="outputsvg"
-   width="2818.9829"
-   height="2441.231"
-   viewBox="0 0 28189.827 24412.308"
+   width="2652.675"
+   height="2548.323"
+   viewBox="0 0 26526.748 25483.228"
    version="1.1"
-   sodipodi:docname="obsidion.svg"
+   sodipodi:docname="topaz.svg"
    inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
-   inkscape:export-filename="obsidion.png"
+   inkscape:export-filename="topaz.png"
    inkscape:export-xdpi="90"
    inkscape:export-ydpi="90"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -34,9 +34,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.32593203"
-     inkscape:cx="286.86963"
-     inkscape:cy="1251.7947"
+     inkscape:zoom="0.23046875"
+     inkscape:cx="-1575.0508"
+     inkscape:cy="2711.8644"
      inkscape:window-width="3840"
      inkscape:window-height="2126"
      inkscape:window-x="-11"
@@ -45,7 +45,7 @@
      inkscape:current-layer="outputsvg" />
   <g
      id="g264"
-     transform="matrix(-3.2208353,-0.59817873,0.59817873,-3.2208353,20866.742,19359.342)">
+     transform="matrix(-3.2208353,-0.59817873,0.59817873,-3.2208353,20035.201,19359.342)">
     <g
        id="liFWlxKhztyO01cVJpAR1r"
        fill="#8379c1">
@@ -92,12 +92,12 @@
   </g>
   <text
      xml:space="preserve"
-     transform="matrix(142.47353,0,0,142.47353,8716.8013,-57184.436)"
+     transform="matrix(170.65207,0,0,170.65207,10377.707,-73005.117)"
      id="text372"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;font-family:sans-serif;white-space:pre;shape-inside:url(#rect374);display:inline;fill:#874da8;fill-opacity:1;stroke:none"><tspan
        x="-54.458984"
        y="565.64696"
-       id="tspan477"><tspan
+       id="tspan327"><tspan
          style="font-family:Birdman;-inkscape-font-specification:Birdman"
-         id="tspan475">Obsidion</tspan></tspan></text>
+         id="tspan325">Topaz</tspan></tspan></text>
 </svg>
