@@ -27,7 +27,7 @@ import std.file : copy, dirEntries, exists, mkdirRecurse, readText, write, SpanM
 import std.path : absolutePath;
 import std.regex : matchAll, matchFirst, regex;
 import std.stdio : writeln, File;
-import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith;
+import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith, strip;
 
 // -- TYPES
 
@@ -508,7 +508,7 @@ string RemoveUuidSuffix(
     string name
     )
 {
-    return name[ 0 .. $ - 33 ];
+    return name[ 0 .. $ - 33 ].strip();
 }
 
 // ~~
