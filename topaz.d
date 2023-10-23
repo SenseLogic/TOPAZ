@@ -25,7 +25,7 @@ import std.algorithm : canFind;
 import std.conv : to;
 import std.file : copy, dirEntries, exists, mkdirRecurse, readText, write, SpanMode;
 import std.path : absolutePath;
-import std.regex : matchAll, matchFirst, regex;
+import std.regex : matchAll, matchFirst, regex, replaceAll;
 import std.stdio : writeln, File;
 import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, startsWith, strip;
 
@@ -260,17 +260,17 @@ class FOLDER
 
     // ~~
 
-    void LinkFiles(
+    void FixFiles(
         )
     {
         foreach ( file; FileArray )
         {
-            file.Link();
+            file.Fix();
         }
 
         foreach ( sub_folder; SubFolderArray )
         {
-            sub_folder.LinkFiles();
+            sub_folder.FixFiles();
         }
     }
 }
@@ -290,7 +290,7 @@ class FILE
         NewName,
         Extension;
     bool
-        IsLinked,
+        IsFixed,
         IsRenamed;
 
     // -- CONSTRUCTORS
@@ -305,12 +305,12 @@ class FILE
         Folder = FolderArray[ $ - 1 ];
         Folder.FileArray ~= this;
 
-        IsLinked
+        IsFixed
             = ( Extension == ".md"
                 || Extension == ".csv" );
 
         IsRenamed
-            = ( IsLinked
+            = ( IsFixed
                 && OldName.HasUuidSuffix() );
 
         if ( IsRenamed )
@@ -378,7 +378,7 @@ class FILE
 
     // ~~
 
-    void Link(
+    void Fix(
         )
     {
         string
@@ -391,7 +391,7 @@ class FILE
         FOLDER*
             found_folder;
 
-        if ( IsLinked )
+        if ( IsFixed )
         {
             file_path = GetFullPath( .NewFolderPath, GetNewPath() );
             file_text = file_path.ReadText();
@@ -425,6 +425,8 @@ class FILE
                 }
             }
 
+            file_text = file_text.replaceAll( VideoLinkRegularExpressions, r"![[$1]]" );
+
             file_path.WriteText( file_text );
         }
     }
@@ -434,7 +436,8 @@ class FILE
 
 auto
     UuidSuffixRegularExpression = regex( "%20[0-9a-f]{32}" ),
-    UuidSuffixedNameRegularExpression = regex( "^.+ [0-9a-f]{32}$" );
+    UuidSuffixedNameRegularExpression = regex( "^.+ [0-9a-f]{32}$" ),
+    VideoLinkRegularExpressions = regex( r"\[[^\[\]]*\]\(([^\(\)]+\.mp4)\)" );
 
 // -- VARIABLES
 
@@ -917,14 +920,14 @@ void CopyFiles(
 
 // ~~
 
-void LinkFiles(
+void FixFiles(
     )
 {
-    writeln( "Linking files : ", NewFolderPath );
+    writeln( "Fixing files : ", NewFolderPath );
 
     if ( FolderArray.length > 0 )
     {
-        FolderArray[ 0 ].LinkFiles();
+        FolderArray[ 0 ].FixFiles();
     }
 }
 
@@ -949,7 +952,7 @@ void main(
             ScanFiles();
             RenameFiles();
             CopyFiles();
-            LinkFiles();
+            FixFiles();
 
             return;
         }
