@@ -31,6 +31,332 @@ import std.string : endsWith, indexOf, join, lastIndexOf, replace, split, starts
 
 // -- TYPES
 
+class FILE
+{
+    // -- ATTRIBUTES
+
+    FOLDER[]
+        FolderArray;
+    FOLDER
+        Folder;
+    string
+        OldName,
+        NewName,
+        Extension;
+    bool
+        IsFixed,
+        IsRenamed;
+
+    // -- CONSTRUCTORS
+
+    this(
+        string file_path
+        )
+    {
+        OldName = file_path.GetFileName();
+        Extension = file_path.GetFileExtension();
+        FolderArray = GetFolderArray( file_path.GetFolderPath() );
+        Folder = FolderArray[ $ - 1 ];
+        Folder.FileArray ~= this;
+
+        IsFixed
+            = ( Extension == ".md"
+                || Extension == ".csv" );
+
+        IsRenamed
+            = ( IsFixed
+                && OldName.HasUuidSuffix() );
+
+        if ( IsRenamed )
+        {
+            NewName = OldName.FixPathsSuffix();
+        }
+        else
+        {
+            NewName = OldName;
+        }
+
+        .FileArray ~= this;
+    }
+
+    // -- INQUIRIES
+
+    string GetOldLabel(
+        )
+    {
+        return OldName ~ Extension;
+    }
+
+    // ~~
+
+    string GetNewLabel(
+        )
+    {
+        return NewName ~ Extension;
+    }
+
+    // ~~
+
+    string GetOldPath(
+        )
+    {
+        return Folder.GetOldPath() ~ GetOldLabel();
+    }
+
+    // ~~
+
+    string GetNewPath(
+        )
+    {
+        return Folder.GetNewPath() ~ GetNewLabel();
+    }
+
+    // ~~
+
+    string GetMatchingFolderPath(
+        )
+    {
+        return Folder.GetNewPath() ~ NewName ~ '/';
+    }
+
+    // ~~
+
+    void Dump(
+        )
+    {
+        writeln( GetOldPath(), "\n", GetNewPath(), "\n" );
+    }
+
+    // -- OPERATIONS
+
+    void Copy(
+        )
+    {
+        CopyFile(
+            GetFullPath( .OldFolderPath, GetOldPath() ),
+            GetFullPath( .NewFolderPath, GetNewPath() )
+            );
+    }
+
+    // ~~
+
+    void FixPaths(
+        ref string file_text
+        )
+    {
+        string[]
+            uuid_suffix_array;
+        FILE*
+            found_file;
+        FOLDER*
+            found_folder;
+
+        foreach ( match; file_text.matchAll( UuidSuffixRegularExpression ) )
+        {
+            uuid_suffix_array ~= " " ~ match.hit[ 3 .. $ ];
+        }
+
+        foreach ( uuid_suffix; uuid_suffix_array )
+        {
+            found_folder = ( uuid_suffix in FolderByUuidSuffixMap );
+
+            if ( found_folder !is null )
+            {
+                file_text = file_text.replace( found_folder.OldName, found_folder.NewName );
+            }
+        }
+
+        foreach ( uuid_suffix; uuid_suffix_array )
+        {
+            found_file = ( uuid_suffix in FileByUuidSuffixMap );
+
+            if ( found_file !is null )
+            {
+                file_text
+                    = file_text.replace(
+                          found_file.OldName.GetEncodedName(),
+                          found_file.NewName.GetEncodedName()
+                          );
+            }
+        }
+    }
+
+    // ~~
+
+    void FixNewlines(
+        ref string file_text
+        )
+    {
+        file_text = file_text.replace( "\r", "" );
+    }
+
+    // ~~
+
+    void FixVideoLinks(
+        ref string file_text
+        )
+    {
+        file_text = file_text.replaceAll( VideoLinkRegularExpressions, r"![[$1]]" );
+    }
+
+    // ~~
+
+    void FixTitles(
+        ref string file_text
+        )
+    {
+        string
+            file_title;
+
+        FixNewlines( file_text );
+
+        while ( file_text.startsWith( '\n' ) )
+        {
+            file_text = file_text[ 1 .. $ ];
+        }
+
+        file_title = "# " ~ NewName ~ "\n";
+
+        if ( file_text.startsWith( file_title ) )
+        {
+            file_text = file_text[ file_title.length .. $ ];
+        }
+
+        while ( file_text.startsWith( '\n' ) )
+        {
+            file_text = file_text[ 1 .. $ ];
+        }
+    }
+
+    // ~~
+
+    void FixIndexes(
+        ref string file_text
+        )
+    {
+        long
+            line_index;
+        string
+            file_link,
+            matching_folder_path,
+            stripped_line;
+        string[]
+            line_array;
+        FILE[ string ]
+            file_by_link_map;
+        FOLDER*
+            matching_folder;
+
+        FixNewlines( file_text );
+
+        matching_folder_path = GetMatchingFolderPath();
+        matching_folder = matching_folder_path in FolderByNewFolderPathMap;
+
+        if ( matching_folder !is null )
+        {
+            foreach ( file; matching_folder.FileArray )
+            {
+                if ( file.Extension == ".md" )
+                {
+                    file_link
+                        = "["
+                          ~ file.NewName
+                          ~ "]("
+                          ~ NewName.GetEncodedName()
+                          ~ "/"
+                          ~ file.NewName.GetEncodedName()
+                          ~ ".md)";
+
+                    file_by_link_map[ file_link ] = file;
+                }
+            }
+
+            line_array = file_text.split( '\n' );
+
+            for ( line_index = 0;
+                  line_index < line_array.length;
+                  ++line_index )
+            {
+                stripped_line = line_array[ line_index ].strip();
+
+                if ( stripped_line.IsLinkLine() )
+                {
+                    if ( ( stripped_line in file_by_link_map ) !is null )
+                    {
+                        line_array
+                            = line_array[ 0 .. line_index ]
+                              ~ line_array[ line_index + 1 .. $ ];
+
+                        --line_index;
+                    }
+                }
+                else if ( stripped_line == "" )
+                {
+                    line_array
+                        = line_array[ 0 .. line_index ]
+                          ~ line_array[ line_index + 1 .. $ ];
+
+                    --line_index;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            file_text = line_array.join( '\n' );
+        }
+    }
+
+    // ~~
+
+    void Fix(
+        )
+    {
+        string
+            file_path,
+            file_text;
+
+        if ( IsFixed )
+        {
+            file_path = GetFullPath( .NewFolderPath, GetNewPath() );
+            file_text = file_path.ReadText();
+
+            if ( FixPathsOptionIsEnabled )
+            {
+                FixPaths( file_text );
+            }
+
+            if ( Extension == ".md" )
+            {
+                if ( FixNewlinesOptionIsEnabled )
+                {
+                    FixNewlines( file_text );
+                }
+
+                if ( FixVideoLinksOptionIsEnabled )
+                {
+                    FixVideoLinks( file_text );
+                }
+
+                if ( FixTitlesOptionIsEnabled )
+                {
+                    FixTitles( file_text );
+                }
+
+                if ( FixIndexesOptionIsEnabled )
+                {
+                    FixIndexes( file_text );
+                }
+            }
+
+            file_path.WriteText( file_text );
+        }
+    }
+}
+
+// ~~
+
 class FOLDER
 {
     // -- ATTRIBUTES
@@ -74,7 +400,7 @@ class FOLDER
 
         if ( IsRenamed )
         {
-            NewName = OldName.RemoveUuidSuffix();
+            NewName = OldName.FixPathsSuffix();
         }
         else
         {
@@ -275,175 +601,25 @@ class FOLDER
     }
 }
 
-// ~~
-
-class FILE
-{
-    // -- ATTRIBUTES
-
-    FOLDER[]
-        FolderArray;
-    FOLDER
-        Folder;
-    string
-        OldName,
-        NewName,
-        Extension;
-    bool
-        IsFixed,
-        IsRenamed;
-
-    // -- CONSTRUCTORS
-
-    this(
-        string file_path
-        )
-    {
-        OldName = file_path.GetFileName();
-        Extension = file_path.GetFileExtension();
-        FolderArray = GetFolderArray( file_path.GetFolderPath() );
-        Folder = FolderArray[ $ - 1 ];
-        Folder.FileArray ~= this;
-
-        IsFixed
-            = ( Extension == ".md"
-                || Extension == ".csv" );
-
-        IsRenamed
-            = ( IsFixed
-                && OldName.HasUuidSuffix() );
-
-        if ( IsRenamed )
-        {
-            NewName = OldName.RemoveUuidSuffix();
-        }
-        else
-        {
-            NewName = OldName;
-        }
-
-        .FileArray ~= this;
-    }
-
-    // -- INQUIRIES
-
-    string GetOldLabel(
-        )
-    {
-        return OldName ~ Extension;
-    }
-
-    // ~~
-
-    string GetNewLabel(
-        )
-    {
-        return NewName ~ Extension;
-    }
-
-    // ~~
-
-    string GetOldPath(
-        )
-    {
-        return Folder.GetOldPath() ~ GetOldLabel();
-    }
-
-    // ~~
-
-    string GetNewPath(
-        )
-    {
-        return Folder.GetNewPath() ~ GetNewLabel();
-    }
-
-    // ~~
-
-    void Dump(
-        )
-    {
-        writeln( GetOldPath(), "\n", GetNewPath(), "\n" );
-    }
-
-    // -- OPERATIONS
-
-    void Copy(
-        )
-    {
-        CopyFile(
-            GetFullPath( .OldFolderPath, GetOldPath() ),
-            GetFullPath( .NewFolderPath, GetNewPath() )
-            );
-    }
-
-    // ~~
-
-    void Fix(
-        )
-    {
-        string
-            file_path,
-            file_text;
-        string[]
-            uuid_suffix_array;
-        FILE*
-            found_file;
-        FOLDER*
-            found_folder;
-
-        if ( IsFixed )
-        {
-            file_path = GetFullPath( .NewFolderPath, GetNewPath() );
-            file_text = file_path.ReadText();
-
-            foreach ( match; file_text.matchAll( UuidSuffixRegularExpression ) )
-            {
-                uuid_suffix_array ~= " " ~ match.hit[ 3 .. $ ];
-            }
-
-            foreach ( uuid_suffix; uuid_suffix_array )
-            {
-                found_folder = ( uuid_suffix in FolderByUuidSuffixMap );
-
-                if ( found_folder !is null )
-                {
-                    file_text = file_text.replace( found_folder.OldName, found_folder.NewName );
-                }
-            }
-
-            foreach ( uuid_suffix; uuid_suffix_array )
-            {
-                found_file = ( uuid_suffix in FileByUuidSuffixMap );
-
-                if ( found_file !is null )
-                {
-                    file_text
-                        = file_text.replace(
-                              found_file.OldName.GetEncodedName(),
-                              found_file.NewName.GetEncodedName()
-                              );
-                }
-            }
-
-            file_text = file_text.replaceAll( VideoLinkRegularExpressions, r"![[$1]]" );
-
-            file_path.WriteText( file_text );
-        }
-    }
-}
-
 // -- CONSTANTS
 
 auto
+    LinkLineRegularExpression = regex( r"^\[.+\]\(.+.md\)$" ),
     UuidSuffixRegularExpression = regex( "%20[0-9a-f]{32}" ),
     UuidSuffixedNameRegularExpression = regex( "^.+ [0-9a-f]{32}$" ),
     VideoLinkRegularExpressions = regex( r"\[[^\[\]]*\]\(([^\(\)]+\.mp4)\)" );
 
 // -- VARIABLES
 
+bool
+    FixIndexesOptionIsEnabled,
+    FixPathsOptionIsEnabled,
+    FixNewlinesOptionIsEnabled,
+    FixTitlesOptionIsEnabled,
+    FixVideoLinksOptionIsEnabled;
 string
-    OldFolderPath,
-    NewFolderPath;
+    NewFolderPath,
+    OldFolderPath;
 FILE[]
     FileArray;
 FILE[ string ]
@@ -451,6 +627,7 @@ FILE[ string ]
 FOLDER[]
     FolderArray;
 FOLDER[ string ]
+    FolderByNewFolderPathMap,
     FolderByOldFolderPathMap,
     FolderByUuidSuffixMap;
 
@@ -489,6 +666,15 @@ void Abort(
 
 // ~~
 
+bool IsLinkLine(
+    string line
+    )
+{
+    return !matchFirst( line, LinkLineRegularExpression ).empty;
+}
+
+// ~~
+
 bool HasUuidSuffix(
     string name
     )
@@ -507,7 +693,7 @@ string GetUuidSuffix(
 
 // ~~
 
-string RemoveUuidSuffix(
+string FixPathsSuffix(
     string name
     )
 {
@@ -927,6 +1113,11 @@ void FixFiles(
 
     if ( FolderArray.length > 0 )
     {
+        foreach ( folder; FolderArray )
+        {
+            FolderByNewFolderPathMap[ folder.GetNewPath() ] = folder;
+        }
+
         FolderArray[ 0 ].FixFiles();
     }
 }
@@ -937,21 +1128,82 @@ void main(
     string[] argument_array
     )
 {
+    string
+        option;
+
     argument_array = argument_array[ 1 .. $ ];
 
-    if ( argument_array.length == 2 )
+    FixPathsOptionIsEnabled = false;
+    FixNewlinesOptionIsEnabled = false;
+    FixVideoLinksOptionIsEnabled = false;
+    FixTitlesOptionIsEnabled = false;
+    FixIndexesOptionIsEnabled = false;
+
+    while ( argument_array.length >= 1
+            && argument_array[ 0 ].startsWith( "--" ) )
+    {
+        option = argument_array[ 0 ];
+        argument_array = argument_array[ 1 .. $ ];
+
+        if ( option == "--fix-paths" )
+        {
+            FixPathsOptionIsEnabled = true;
+        }
+        else if ( option == "--fix-newlines" )
+        {
+            FixNewlinesOptionIsEnabled = true;
+        }
+        else if ( option == "--fix-video-links" )
+        {
+            FixVideoLinksOptionIsEnabled = true;
+        }
+        else if ( option == "--fix-titles" )
+        {
+            FixTitlesOptionIsEnabled = true;
+        }
+        else if ( option == "--fix-indexes" )
+        {
+            FixIndexesOptionIsEnabled = true;
+        }
+        else
+        {
+            Abort( "Invalid option : " ~ option );
+        }
+    }
+
+    if ( ( argument_array.length == 1
+           && !FixPathsOptionIsEnabled )
+         || argument_array.length == 2 )
     {
         OldFolderPath = argument_array[ 0 ].GetLogicalPath();
-        NewFolderPath = argument_array[ 1 ].GetLogicalPath();
+
+        if ( argument_array.length == 2 )
+        {
+            NewFolderPath = argument_array[ 1 ].GetLogicalPath();
+        }
+        else
+        {
+            NewFolderPath = OldFolderPath;
+        }
 
         if ( OldFolderPath.endsWith( '/' )
              && NewFolderPath.endsWith( '/' )
-             && !OldFolderPath.startsWith( NewFolderPath )
-             && !NewFolderPath.startsWith( OldFolderPath ) )
+             && ( argument_array.length == 1
+                  || ( !OldFolderPath.startsWith( NewFolderPath )
+                       && !NewFolderPath.startsWith( OldFolderPath ) ) ) )
         {
             ScanFiles();
-            RenameFiles();
-            CopyFiles();
+
+            if ( NewFolderPath != OldFolderPath )
+            {
+                if ( FixPathsOptionIsEnabled )
+                {
+                    RenameFiles();
+                }
+
+                CopyFiles();
+            }
+
             FixFiles();
 
             return;
@@ -959,7 +1211,17 @@ void main(
     }
 
     writeln( "Usage :" );
-    writeln( "    topaz NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
+    writeln( "    topaz [options] NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
+    writeln( "    topaz [options] OBSIDIAN_VAULT_FOLDER/" );
+    writeln( "Options :" );
+    writeln( "    --fix-paths" );
+    writeln( "    --fix-newlines" );
+    writeln( "    --fix-video-links" );
+    writeln( "    --fix-titles" );
+    writeln( "    --fix-indexes" );
+    writeln( "Examples :" );
+    writeln( "    topaz --fix-paths --fix-newlines --fix-video-links --fix-titles --fix-indexes NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/" );
+    writeln( "    topaz --fix-newlines --fix-video-links --fix-titles --fix-indexes OBSIDIAN_VAULT_FOLDER/" );
 
     Abort( "Invalid arguments : " ~ argument_array.to!string() );
 }

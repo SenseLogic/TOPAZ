@@ -17,10 +17,36 @@ dmd -m64 topaz.d
 ## Command line
 
 ```bash
-topaz NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
+topaz [options] NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
+topaz [options] OBSIDIAN_VAULT_FOLDER/
 ```
 
-Copies and converts the notes from the Notion export folder to the Obsidian vault folder.
+
+### Options
+
+```
+--fix-paths : fix paths
+--fix-newlines : fix newlines
+--fix-video-links : fix video links
+--fix-titles : fix titles
+--fix-indexes : fix indexes
+```
+
+Removing the note UUID requires to copy the notes between two different folders.
+
+### Examples
+
+```bash
+topaz --fix-paths --fix-newlines --fix-video-links --fix-titles --fix-indexes NOTION_EXPORT_FOLDER/ OBSIDIAN_VAULT_FOLDER/
+```
+
+Copies notes and their media files from the Notion export folder to the Obsidian vault folder, fixing paths, newlines, video links, titles and indexes.
+
+```bash
+topaz --fix-newlines --fix-video-links --fix-titles --fix-indexes OBSIDIAN_VAULT_FOLDER/
+```
+
+Fixes newlines, video links, titles and indexes of the Obsidian vault folder notes.
 
 ## Version
 
