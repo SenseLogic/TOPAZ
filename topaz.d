@@ -199,8 +199,8 @@ class FILE
         file_text
             = file_text
                   .replaceAll( VideoLinkRegularExpressions, r"![[$1]]" )
-                  .replaceAll( YoutuBeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?$2)" )
-                  .replaceAll( YouTubeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?$2)" );
+                  .replaceAll( YoutuBeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?v=$2)" )
+                  .replaceAll( YouTubeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?v=$2)" );
     }
 
     // ~~
