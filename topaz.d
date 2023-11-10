@@ -198,7 +198,8 @@ class FILE
     {
         file_text
             = file_text
-                  .replaceAll( VideoLinkRegularExpressions, r"![[$1]]" )
+                  .replaceAll( Mp4VideoLinkRegularExpressions, r"![[$1]]" )
+                  .replaceAll( WebmVideoLinkRegularExpressions, r"![[$1]]" )
                   .replaceAll( YoutuBeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?v=$2)" )
                   .replaceAll( YouTubeVideoLinkRegularExpression, r"!$1(https://www.youtube.com/watch?v=$2)" );
     }
@@ -611,7 +612,8 @@ auto
     LinkLineRegularExpression = regex( r"^\[.+\]\(.+.md\)$" ),
     UuidSuffixRegularExpression = regex( "%20[0-9a-f]{32}" ),
     UuidSuffixedNameRegularExpression = regex( "^.+ [0-9a-f]{32}$" ),
-    VideoLinkRegularExpressions = regex( r"\[[^\[\]]*\]\(([^\(\)]+\.mp4)\)" ),
+    Mp4VideoLinkRegularExpressions = regex( r"\[[^\[\]]*\]\(([^\(\)]+\.mp4)\)" ),
+    WebmVideoLinkRegularExpressions = regex( r"\[[^\[\]]*\]\(([^\(\)]+\.webm)\)" ),
     YoutuBeVideoLinkRegularExpression = regex( r"(\[[^\[\]]*\])\(https:\/\/youtu\.be\/([a-zA-Z0-9_-]+)\)" ),
     YouTubeVideoLinkRegularExpression = regex( r"(\[[^\[\]]*\])\(https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)\)" );
 
